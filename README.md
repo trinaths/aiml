@@ -1,1 +1,1 @@
-# aiml
+This repository captures all the hands-on programming to self-learn AI and ML.
