@@ -1,49 +1,46 @@
-# Import necessary libraries
+# Step 1: Import Libraries/Data Set
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_curve, roc_auc_score
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_auc_score, RocCurveDisplay
 
-# Load the dataset
-url = 'https://hastebin.skyra.pw/duyogerula.powershell'
+# Load the Titanic dataset
+url = "data.csv"
 data = pd.read_csv(url)
 
-# Plotting EDA graphs
-plt.figure(figsize=(12, 6))
-
-# Plot survival rate by gender
-plt.subplot(1, 2, 1)
-sns.barplot(x='Sex', y='Survived', data=data)
-plt.title('Survival Rate by Gender')
-
-# Plot survival rate by passenger class
-plt.subplot(1, 2, 2)
-sns.barplot(x='Pclass', y='Survived', data=data)
-plt.title('Survival Rate by Passenger Class')
-
-plt.tight_layout()
+# Step 2: Data Visualization and Augmentation
+# EDA Graphs
+# 1. Countplot of survival
+plt.figure(figsize=(10, 5))
+sns.countplot(x='Survived', data=data)
+plt.title('Count of Survival')
 plt.show()
 
-# Preparing data
-# Fill missing values
-data['Age'].fillna(data['Age'].median(), inplace=True)
-data['Embarked'].fillna(data['Embarked'].mode()[0], inplace=True)
 
-# Convert categorical variables to numerical
+
+# 2. Age distribution of passengers
+plt.figure(figsize=(10, 5))
+sns.histplot(data['Age'].dropna(), bins=30, kde=True)
+plt.title('Age Distribution of Passengers')
+plt.show()
+
+# Step 3: Prepare Data for Model
+# Dropping unnecessary columns and handling missing values
+data = data[['Survived', 'Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare']]
 data['Sex'] = data['Sex'].map({'male': 0, 'female': 1})
-data['Embarked'] = data['Embarked'].map({'C': 0, 'Q': 1, 'S': 2})
+data['Age'].fillna(data['Age'].median(), inplace=True)
+data['Fare'].fillna(data['Fare'].median(), inplace=True)
 
-# Select features and target variable
-features = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Embarked']
-X = data[features]
+# Splitting data into features and target
+X = data.drop('Survived', axis=1)
 y = data['Survived']
 
-# Split data into train and test sets
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Scaling the data
@@ -52,8 +49,66 @@ X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
 # Print shapes of train and test data
-print(f"Training data shape: {X_train_scaled.shape}")
-print(f"Test data shape: {X_test_scaled.shape}")
+print("Training data shape:", X_train_scaled.shape)
+print("Testing data shape:", X_test_scaled.shape)
 
+# OUTPUT
+# Training data shape: (712, 6)
+# Testing data shape: (179, 6)
 
+# Step 4: Naïve Bayes Model Building
+# Building Naïve Bayes model
+nb_model = GaussianNB()
+nb_model.fit(X_train_scaled, y_train)
 
+# Model summary
+print("Naïve Bayes Model Trained")
+
+# Step 5: SVM Model Building
+# Building SVM model
+svm_model = SVC(probability=True)
+svm_model.fit(X_train_scaled, y_train)
+
+# Model summary
+print("SVM Model Trained")
+
+# Step 6: Model Evaluation
+# Naïve Bayes Evaluation
+nb_predictions = nb_model.predict(X_test_scaled)
+nb_accuracy = accuracy_score(y_test, nb_predictions)
+nb_confusion = confusion_matrix(y_test, nb_predictions)
+nb_f1 = f1_score(y_test, nb_predictions)
+nb_auc = roc_auc_score(y_test, nb_model.predict_proba(X_test_scaled)[:, 1])
+
+print("Naïve Bayes Accuracy:", nb_accuracy)
+print("Naïve Bayes Confusion Matrix:\n", nb_confusion)
+print("Naïve Bayes F1 Score:", nb_f1)
+print("Naïve Bayes AUC:", nb_auc)
+
+# Plot AUC-ROC for Naïve Bayes
+RocCurveDisplay.from_estimator(nb_model, X_test_scaled, y_test)
+plt.title('Naïve Bayes AUC-ROC')
+plt.show()
+
+# SVM Evaluation
+svm_predictions = svm_model.predict(X_test_scaled)
+svm_accuracy = accuracy_score(y_test, svm_predictions)
+svm_confusion = confusion_matrix(y_test, svm_predictions)
+svm_f1 = f1_score(y_test, svm_predictions)
+svm_auc = roc_auc_score(y_test, svm_model.predict_proba(X_test_scaled)[:, 1])
+
+print("SVM Accuracy:", svm_accuracy)
+print("SVM Confusion Matrix:\n", svm_confusion)
+print("SVM F1 Score:", svm_f1)
+print("SVM AUC:", svm_auc)
+
+# Plot AUC-ROC for SVM
+RocCurveDisplay.from_estimator(svm_model, X_test_scaled, y_test)
+plt.title('SVM AUC-ROC')
+plt.show()
+
+# Step 7: Compare Performances
+print("\nComparison of Naïve Bayes and SVM:")
+print(f"Naïve Bayes Accuracy: {nb_accuracy}, SVM Accuracy: {svm_accuracy}")
+print(f"Naïve Bayes F1 Score: {nb_f1}, SVM F1 Score: {svm_f1}")
+print(f"Naïve Bayes AUC: {nb_auc}, SVM AUC: {svm_auc}")
